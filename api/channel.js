@@ -1,15 +1,72 @@
 import { getChannels } from "../lib/playlist.js";
 
+function requestIsSameOrigin(req) {
+  const requestHost = String(
+    req.headers["x-forwarded-host"] || req.headers.host || ""
+  )
+    .split(",")[0]
+    .trim()
+    .toLowerCase();
+
+  if (!requestHost) return false;
+
+  let expectedHost;
+
+  try {
+    expectedHost = new URL(`https://${requestHost}`).hostname.toLowerCase();
+  } catch {
+    return false;
+  }
+
+  const origin = req.headers.origin;
+  const referer = req.headers.referer;
+  const fetchSite = req.headers["sec-fetch-site"];
+
+  if (origin) {
+    try {
+      if (new URL(origin).hostname.toLowerCase() !== expectedHost) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  if (referer) {
+    try {
+      if (new URL(referer).hostname.toLowerCase() !== expectedHost) {
+        return false;
+      }
+    } catch {
+      return false;
+    }
+  }
+
+  if (fetchSite && fetchSite !== "same-origin") {
+    return false;
+  }
+
+  return Boolean(origin || referer);
+}
+
 export default async function handler(req, res) {
   res.setHeader("Cache-Control", "no-store, max-age=0");
   res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
 
   if (req.method !== "GET") {
     res.setHeader("Allow", "GET");
     return res.status(405).json({ error: "Method not allowed." });
   }
 
+  if (!requestIsSameOrigin(req)) {
+    return res.status(403).json({
+      error: "This channel request is not authorized."
+    });
+  }
+
   const name = String(req.query.name || "").trim().toLowerCase();
+
   if (!name || !/^[a-z0-9_-]{1,80}$/.test(name)) {
     return res.status(400).json({ error: "Invalid channel name." });
   }
@@ -17,10 +74,23 @@ export default async function handler(req, res) {
   try {
     const channels = await getChannels();
     const channel = channels.find((item) => item.slug === name);
-    if (!channel) return res.status(404).json({ error: "Channel not found in the current Rebel IPTV playlist." });
-    return res.status(200).json({ name: channel.name, slug: channel.slug, url: channel.url });
+
+    if (!channel) {
+      return res.status(404).json({
+        error: "Channel not found in the current Rebel IPTV playlist."
+      });
+    }
+
+    return res.status(200).json({
+      name: channel.name,
+      slug: channel.slug,
+      url: channel.url
+    });
   } catch (error) {
     console.error("Rebel IPTV playlist lookup failed:", error);
-    return res.status(502).json({ error: "Unable to load the Rebel IPTV playlist right now." });
+
+    return res.status(502).json({
+      error: "Unable to load the Rebel IPTV playlist right now."
+    });
   }
-};
+}
