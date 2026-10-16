@@ -1,4 +1,3 @@
-import { URL } from "node:url";
 
 function getAllowedDomains() {
   return String(process.env.EMBED_ALLOWED_DOMAINS || "")
@@ -7,20 +6,28 @@ function getAllowedDomains() {
     .filter(Boolean)
     .map((entry) => {
       try {
-        return new URL(
+        const url = new URL(
           entry.includes("://") ? entry : `https://${entry}`
-        ).hostname.toLowerCase();
+        );
+
+        if (
+          url.protocol !== "https:" ||
+          !url.hostname ||
+          url.username ||
+          url.password ||
+          url.pathname !== "/" ||
+          url.search ||
+          url.hash
+        ) {
+          return "";
+        }
+
+        return url.hostname;
       } catch {
         return "";
       }
     })
     .filter(Boolean);
-}
-
-function forbidden(res) {
-  res.setHeader("Cache-Control", "no-store");
-  res.setHeader("X-Content-Type-Options", "nosniff");
-  return res.status(403).send("Embed not authorized for this domain.");
 }
 
 export default function handler(req, res) {
@@ -39,26 +46,9 @@ export default function handler(req, res) {
     return res.status(503).send("Embed allowlist is not configured.");
   }
 
-  const referer = req.headers.referer || "";
-  const fetchDestination = req.headers["sec-fetch-dest"];
-
-  let parentHost;
-
-  try {
-    parentHost = new URL(referer).hostname.toLowerCase();
-  } catch {
-    return forbidden(res);
-  }
-
-  if (!allowedDomains.includes(parentHost)) {
-    return forbidden(res);
-  }
-
-  if (fetchDestination && fetchDestination !== "iframe") {
-    return forbidden(res);
-  }
-
-  const channel = String(req.query.channel || "").trim().toLowerCase();
+  const channel = String(req.query.channel || "")
+    .trim()
+    .toLowerCase();
 
   if (!/^[a-z0-9_-]{1,80}$/.test(channel)) {
     return res.status(400).send("Invalid channel name.");
@@ -101,12 +91,14 @@ export default function handler(req, res) {
       overflow: hidden;
       background: #000;
     }
+
     iframe {
       display: block;
       width: 100%;
       height: 100%;
       border: 0;
     }
+
     #blocked {
       display: none;
       color: #fff;
@@ -118,13 +110,21 @@ export default function handler(req, res) {
 </head>
 <body>
   <div id="blocked">This premium embed must be opened inside an approved website.</div>
-  <iframe id="player" title="FutbolX Player" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>
+
+  <iframe
+    id="player"
+    title="FutbolX Player"
+    allow="autoplay; fullscreen; picture-in-picture"
+    allowfullscreen>
+  </iframe>
+
   <script>
     if (window.top === window.self) {
       document.getElementById("player").remove();
       document.getElementById("blocked").style.display = "block";
     } else {
-      document.getElementById("player").src = ${JSON.stringify(playerUrl)};
+      document.getElementById("player").src =
+        ${JSON.stringify(playerUrl)};
     }
   </script>
 </body>
