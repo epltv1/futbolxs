@@ -15,9 +15,11 @@
   const fullscreenButton = document.getElementById("fullscreen");
   let player = null;
   let hideControlsTimer = null;
-  let isSeeking = false;
-  const streamUrl = new URLSearchParams(window.location.search).get("src");
 
+  function channelSlug() {
+    const path = window.location.pathname.replace(/^\/+|\/+$/g, "");
+    return path && path !== "index.html" ? decodeURIComponent(path.split("/")[0]) : "";
+  }
   function showMessage(text) { message.textContent = text; message.hidden = false; }
   function clearMessage() { message.textContent = ""; message.hidden = true; }
   function setPlayIcon(isPlaying) {
@@ -35,7 +37,7 @@
   function showControls() {
     shell.classList.remove("controls-hidden");
     clearTimeout(hideControlsTimer);
-    if (!video.paused && !isSeeking) hideControlsTimer = setTimeout(() => shell.classList.add("controls-hidden"), 2800);
+    if (!video.paused) hideControlsTimer = setTimeout(() => shell.classList.add("controls-hidden"), 2800);
   }
   function destroyPlayer() {
     if (!player) return;
@@ -45,10 +47,25 @@
     try { player.destroy(); } catch (_) {}
     player = null;
   }
-  async function startPlayback() {
+  async function loadChannel() {
+    const slug = channelSlug();
+    if (!slug) {
+      showMessage("Open a channel link, for example /abc.");
+      return;
+    }
+    try {
+      const response = await fetch(`/api/channel?name=${encodeURIComponent(slug)}`, { cache: "no-store" });
+      const data = await response.json().catch(() => ({}));
+      if (!response.ok || !data.url) throw new Error(data.error || "Channel not found.");
+      await startPlayback(data.url);
+    } catch (error) {
+      console.error("Channel lookup failed:", error);
+      showMessage(error.message || "Unable to load this channel.");
+    }
+  }
+  async function startPlayback(url) {
     clearMessage();
     startButton.hidden = true;
-    if (!streamUrl) { showMessage("No stream URL was provided."); return; }
     if (!window.mpegts || !window.mpegts.isSupported()) {
       showMessage("MPEG-TS playback is not supported by this browser.");
       startButton.hidden = false;
@@ -58,7 +75,7 @@
     video.removeAttribute("src");
     video.load();
     try {
-      player = window.mpegts.createPlayer({ type: "mpegts", isLive: true, url: streamUrl }, {
+      player = window.mpegts.createPlayer({ type: "mpegts", isLive: true, url }, {
         enableWorker: true,
         enableStashBuffer: true,
         stashInitialSize: 128,
@@ -73,7 +90,7 @@
       player.attachMediaElement(video);
       player.on(window.mpegts.Events.ERROR, (type, detail, info) => {
         console.error("MPEG-TS playback error:", type, detail, info || "");
-        showMessage("Playback error. Try pressing play to retry.");
+        showMessage("Playback error. Press play to retry.");
         startButton.hidden = false;
       });
       player.on(window.mpegts.Events.LOADING_COMPLETE, () => {
@@ -82,23 +99,24 @@
       });
       player.load();
       const playPromise = video.play();
-      if (playPromise && typeof playPromise.catch === "function") playPromise.catch(() => { startButton.hidden = false; startButton.textContent = "Tap to play"; });
+      if (playPromise && typeof playPromise.catch === "function") {
+        playPromise.catch(() => { startButton.hidden = false; startButton.textContent = "Tap to play"; });
+      }
     } catch (error) {
       console.error("Unable to start MPEG-TS player:", error);
       showMessage("Unable to start playback.");
       startButton.hidden = false;
     }
   }
-
   playPause.addEventListener("click", async () => {
     if (video.paused) {
-      if (!player) await startPlayback();
+      if (!player) await loadChannel();
       else { try { await video.play(); } catch (_) { startButton.hidden = false; } }
     } else video.pause();
     showControls();
   });
   startButton.addEventListener("click", async () => {
-    if (!player) await startPlayback();
+    if (!player) await loadChannel();
     else { clearMessage(); try { await video.play(); } catch (_) {} }
     showControls();
   });
@@ -106,7 +124,8 @@
     video.muted = !video.muted;
     if (!video.muted && video.volume === 0) video.volume = 0.5;
     volume.value = String(video.volume);
-    setVolumeIcon(); showControls();
+    setVolumeIcon();
+    showControls();
   });
   volume.addEventListener("input", () => { video.volume = Number(volume.value); video.muted = video.volume === 0; setVolumeIcon(); });
   fullscreenButton.addEventListener("click", async () => {
@@ -124,7 +143,7 @@
     } catch (error) { console.warn("Picture-in-picture unavailable:", error); }
     showControls();
   });
-  airplayButton.addEventListener("click", async () => {
+  airplayButton.addEventListener("click", () => {
     try {
       if (video.webkitShowPlaybackTargetPicker) video.webkitShowPlaybackTargetPicker();
       else showMessage("AirPlay is not supported in this browser.");
@@ -142,13 +161,9 @@
   controls.addEventListener("mouseleave", showControls);
   document.addEventListener("visibilitychange", () => { if (!document.hidden && !video.paused) showControls(); });
   window.addEventListener("pagehide", destroyPlayer);
-
-  if (streamUrl) {
-    video.muted = true;
-    volume.value = "1";
-    setVolumeIcon();
-    startPlayback();
-  } else showMessage("Missing stream URL. Pass the MPEG-TS URL in the src parameter.");
-  setPlayIcon(false);
+  video.muted = true;
+  volume.value = "1";
   setVolumeIcon();
+  setPlayIcon(false);
+  loadChannel();
 })();
