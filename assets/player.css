@@ -1,16 +1,1 @@
-* { box-sizing: border-box; }
-html, body { margin: 0; width: 100%; height: 100%; background: #000; color: #fff; }
-body { overflow: hidden; font-family: Arial, Helvetica, sans-serif; }
-.player-shell { position: relative; width: 100%; height: 100%; min-height: 180px; background: #000; overflow: hidden; }
-#video { display: block; width: 100%; height: 100%; object-fit: contain; background: #000; }
-.fx-controls { position: absolute; left: 0; right: 0; bottom: 0; z-index: 5; display: flex; align-items: center; gap: 8px; padding: 32px 12px 10px; background: linear-gradient(transparent, rgba(0,0,0,.78)); opacity: 1; transition: opacity .22s ease; }
-.player-shell.controls-hidden .fx-controls { opacity: 0; pointer-events: none; }
-.fx-button { width: 36px; height: 36px; padding: 7px; border: 0; border-radius: 6px; color: #fff; background: transparent; cursor: pointer; display: grid; place-items: center; }
-.fx-button:hover, .fx-button:focus-visible { background: rgba(255,255,255,.16); outline: none; }
-.fx-button svg { width: 22px; height: 22px; fill: currentColor; }
-.fx-volume { width: 82px; accent-color: #ff3b30; cursor: pointer; }
-.fx-spacer { flex: 1; }
-.fx-message { position: absolute; z-index: 4; left: 12px; right: 12px; bottom: 58px; padding: 8px 10px; border-radius: 6px; background: rgba(0,0,0,.72); color: #eee; font-size: 13px; text-align: center; }
-.fx-start { position: absolute; z-index: 6; left: 50%; top: 50%; transform: translate(-50%, -50%); border: 0; border-radius: 7px; padding: 12px 18px; background: #ff3b30; color: #fff; font-weight: 700; cursor: pointer; }
-[hidden] { display: none !important; }
-@media (max-width: 480px) { .fx-controls { gap: 4px; padding: 28px 7px 7px; } .fx-button { width: 33px; height: 33px; padding: 6px; } .fx-volume { width: 58px; } }
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;background:#000;color:#fff}body{overflow:hidden;font-family:Arial,Helvetica,sans-serif}.player-shell{position:relative;width:100%;height:100%;min-height:180px;background:#000;overflow:hidden}#video{display:block;width:100%;height:100%;object-fit:contain;background:#000}.fx-controls{position:absolute;left:0;right:0;bottom:0;z-index:5;display:flex;align-items:center;gap:8px;padding:32px 12px 10px;background:linear-gradient(transparent,rgba(0,0,0,.78));opacity:1;transition:opacity .22s ease}.player-shell.controls-hidden .fx-controls{opacity:0;pointer-events:none}.fx-button{width:36px;height:36px;padding:7px;border:0;border-radius:6px;color:#fff;background:transparent;cursor:pointer;display:grid;place-items:center}.fx-button:hover,.fx-button:focus-visible{background:rgba(255,255,255,.16);outline:none}.fx-button svg{width:22px;height:22px;fill:currentColor}.fx-volume{width:82px;accent-color:#ff3b30;cursor:pointer}.fx-spacer{flex:1}.fx-message{position:absolute;z-index:4;left:12px;right:12px;bottom:58px;padding:8px 10px;border-radius:6px;background:rgba(0,0,0,.72);color:#eee;font-size:13px;text-align:center}.fx-start{position:absolute;z-index:6;left:50%;top:50%;transform:translate(-50%,-50%);border:0;border-radius:7px;padding:12px 18px;background:#ff3b30;color:#fff;font-weight:700;cursor:pointer}[hidden]{display:none!important}@media(max-width:480px){.fx-controls{gap:4px;padding:28px 7px 7px}.fx-button{width:33px;height:33px;padding:6px}.fx-volume{width:58px}}
