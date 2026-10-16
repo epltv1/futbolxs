@@ -5,7 +5,11 @@
   "trailingSlash": false,
   "rewrites": [
     {
-      "source": "/:channel((?!api|assets).*)",
+      "source": "/:channel",
+      "destination": "/index.html"
+    },
+    {
+      "source": "/:channel/",
       "destination": "/index.html"
     }
   ],
